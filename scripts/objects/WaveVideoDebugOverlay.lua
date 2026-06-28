@@ -25,6 +25,8 @@ function WaveVideoDebugOverlay:init(source_type, asset_id, source_wave)
     self.sync_timescale = WaveVideoDebug:getConfig("sync_timescale") ~= false
     self.queued_play = false
     self.was_playing = false
+    self.sync_started = false
+    self.paused_for_timescale = false
     self.video_time = 0
     self:updateFit()
 end
@@ -45,24 +47,49 @@ function WaveVideoDebugOverlay:seekVideo(time)
     end)
 end
 
+function WaveVideoDebugOverlay:tellVideo()
+    local ok, time = pcall(function()
+        return self.video:tell()
+    end)
+    if ok and type(time) == "number" then
+        return time
+    end
+    return self.video_time
+end
+
+function WaveVideoDebugOverlay:getStageTimescale()
+    return Game.stage and Game.stage.timescale or 1
+end
+
+function WaveVideoDebugOverlay:startVideo()
+    if self.source_type ~= "video" then
+        return
+    end
+
+    if not self.stage then
+        self.queued_play = true
+        return
+    end
+
+    if not self.video:isPlaying() then
+        self.video:play()
+    end
+    self.sync_started = true
+    self.paused_for_timescale = false
+    self.was_playing = true
+end
+
 function WaveVideoDebugOverlay:play()
     if self.source_type ~= "video" then
         return
     end
 
     if self.sync_timescale then
-        self.queued_play = false
-        self.video:pause()
-        self:seekVideo(self.video_time)
+        self:startVideo()
         return
     end
 
-    if not self.stage then
-        self.queued_play = true
-    else
-        self.video:play()
-        self.was_playing = true
-    end
+    self:startVideo()
 end
 
 function WaveVideoDebugOverlay:onRemoveFromStage(stage)
@@ -102,12 +129,28 @@ function WaveVideoDebugOverlay:update()
 
     if self.source_type == "video" then
         if self.sync_timescale then
-            if self.video:isPlaying() then
-                self.video:pause()
+            if self.queued_play or not self.sync_started then
+                self.queued_play = false
+                self:startVideo()
             end
 
-            if DT > 0 then
-                local next_time = self.video_time + DT
+            local timescale = self:getStageTimescale()
+            if timescale <= 0.01 then
+                if self.video:isPlaying() then
+                    self.video:pause()
+                end
+                self.paused_for_timescale = true
+                self.was_playing = false
+                super.update(self)
+                return
+            end
+
+            if timescale < 0.99 then
+                if self.video:isPlaying() then
+                    self.video:pause()
+                end
+
+                local next_time = self.video_time + math.max(DT, 0)
                 if self.video_duration and next_time >= self.video_duration then
                     if self.looping then
                         next_time = next_time % self.video_duration
@@ -116,8 +159,24 @@ function WaveVideoDebugOverlay:update()
                     end
                 end
                 self:seekVideo(next_time)
+                self.paused_for_timescale = true
+                self.was_playing = false
+            else
+                if self.paused_for_timescale or not self.video:isPlaying() then
+                    self:seekVideo(self.video_time)
+                    self.video:play()
+                end
+                self.paused_for_timescale = false
                 self.was_playing = true
+                self.video_time = self:tellVideo()
             end
+
+            if self.looping and self.was_playing and not self.video:isPlaying() then
+                self.video:rewind()
+                self.video:play()
+                self.video_time = 0
+            end
+
             super.update(self)
             return
         end
@@ -129,7 +188,7 @@ function WaveVideoDebugOverlay:update()
             end
         end
 
-        local timescale = Game.stage and Game.stage.timescale or 1
+        local timescale = self:getStageTimescale()
         if timescale <= 0.01 then
             self.queued_play = false
             if self.video:isPlaying() then
