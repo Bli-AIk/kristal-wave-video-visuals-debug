@@ -6,8 +6,6 @@ function WaveVideoDebugOverlay:init(video_id, source_wave)
     self.video_id = video_id
     self.source_wave = source_wave
     self.debug_select = false
-    self:setParallax(0)
-    self:setParallaxOrigin(0, 0)
     self.layer = WaveVideoDebug:getLayer()
     self.alpha = WaveVideoDebug:getAlpha()
     self.fit = WaveVideoDebug:getConfig("fit") or "stretch"
@@ -55,6 +53,20 @@ function WaveVideoDebugOverlay:update()
     end
 
     super.update(self)
+end
+
+function WaveVideoDebugOverlay:fullDraw()
+    if not self.visible then
+        return
+    end
+
+    local old_r, old_g, old_b, old_a = love.graphics.getColor()
+    love.graphics.push()
+    love.graphics.origin()
+    Draw.setColor(self:getDrawColor())
+    self:draw()
+    love.graphics.pop()
+    Draw.setColor(old_r, old_g, old_b, old_a)
 end
 
 return WaveVideoDebugOverlay
