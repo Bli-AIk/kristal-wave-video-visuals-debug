@@ -12,6 +12,7 @@ Enable it in your project's `mod.json`:
 "config": {
     "wave-video-debug": {
         "enabled": true,
+        "priority": "video",
         "alpha": 0.3
     }
 }
