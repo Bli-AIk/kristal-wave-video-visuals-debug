@@ -55,11 +55,55 @@ function lib:getVideoId(wave)
     return dir .. "/" .. wave_id
 end
 
-function lib:getFirstWaveVideo(waves)
+function lib:getImageId(wave)
+    local wave_id = wave and wave.id
+    if not wave_id then
+        return nil
+    end
+
+    local dir = trimSlashes(config("image_dir") or "waves")
+    if dir == "" then
+        return wave_id
+    end
+    return dir .. "/" .. wave_id
+end
+
+function lib:getPriority()
+    local priority = config("priority")
+    if priority == "image" then
+        return "image"
+    end
+    return "video"
+end
+
+function lib:getWaveVisual(wave)
+    local video_id = self:getVideoId(wave)
+    local image_id = self:getImageId(wave)
+    local has_video = video_id and Assets.getVideoPath(video_id)
+    local has_image = image_id and Assets.getTexture(image_id)
+
+    if self:getPriority() == "image" then
+        if has_image then
+            return "image", image_id, wave
+        end
+        if has_video then
+            return "video", video_id, wave
+        end
+    else
+        if has_video then
+            return "video", video_id, wave
+        end
+        if has_image then
+            return "image", image_id, wave
+        end
+    end
+end
+
+function lib:getFirstWaveVisual(waves)
     for _, wave in ipairs(waves or {}) do
-        local video_id = self:getVideoId(wave)
-        if video_id and Assets.getVideoPath(video_id) then
-            return video_id, wave
+        local source_type, asset_id = self:getWaveVisual(wave)
+        if source_type then
+            return source_type, asset_id, wave
         end
     end
 end
@@ -78,15 +122,17 @@ function lib:attachToBattle(battle)
         return
     end
 
-    local video_id, wave = self:getFirstWaveVideo(battle and battle.waves)
-    if not video_id then
+    local source_type, asset_id, wave = self:getFirstWaveVisual(battle and battle.waves)
+    if not source_type then
         return
     end
 
-    local overlay = WaveVideoDebugOverlay(video_id, wave)
+    local overlay = WaveVideoDebugOverlay(source_type, asset_id, wave)
     battle.wave_video_debug_overlay = overlay
     battle:addChild(overlay)
-    overlay:play()
+    if overlay.play then
+        overlay:play()
+    end
 end
 
 return lib

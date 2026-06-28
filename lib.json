@@ -8,6 +8,8 @@
     "config": {
         "enabled": false,
         "video_dir": "waves",
+        "image_dir": "waves",
+        "priority": "video",
         "alpha": 0.3,
         "layer": "top",
         "audio": false,

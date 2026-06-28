@@ -1,16 +1,50 @@
-local WaveVideoDebugOverlay, super = Class(Video)
+local WaveVideoDebugOverlay, super = Class(Object)
 
-function WaveVideoDebugOverlay:init(video_id, source_wave)
-    super.init(self, video_id, WaveVideoDebug:getConfig("audio") == true, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+function WaveVideoDebugOverlay:init(source_type, asset_id, source_wave)
+    super.init(self, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
 
-    self.video_id = video_id
+    if source_type == "video" then
+        self.video = Assets.newVideo(asset_id, WaveVideoDebug:getConfig("audio") == true)
+        self.visual_width = self.video:getWidth()
+        self.visual_height = self.video:getHeight()
+    else
+        self.texture = Assets.getTexture(asset_id)
+        self.visual_width = self.texture:getWidth()
+        self.visual_height = self.texture:getHeight()
+    end
+
+    self.source_type = source_type
+    self.asset_id = asset_id
     self.source_wave = source_wave
     self.debug_select = false
     self.layer = WaveVideoDebug:getLayer()
     self.alpha = WaveVideoDebug:getAlpha()
     self.fit = WaveVideoDebug:getConfig("fit") or "stretch"
-    self:setLooping(WaveVideoDebug:getConfig("loop") == true)
+    self.looping = WaveVideoDebug:getConfig("loop") == true
+    self.queued_play = false
+    self.was_playing = false
     self:updateFit()
+end
+
+function WaveVideoDebugOverlay:play()
+    if self.source_type ~= "video" then
+        return
+    end
+
+    if not self.stage then
+        self.queued_play = true
+    else
+        self.video:play()
+        self.was_playing = true
+    end
+end
+
+function WaveVideoDebugOverlay:onRemoveFromStage(stage)
+    super.onRemoveFromStage(self, stage)
+
+    if self.video and self.video:isPlaying() then
+        self.video:pause()
+    end
 end
 
 function WaveVideoDebugOverlay:updateFit()
@@ -18,11 +52,11 @@ function WaveVideoDebugOverlay:updateFit()
     local target_w, target_h = SCREEN_WIDTH, SCREEN_HEIGHT
 
     if fit == "contain" or fit == "cover" then
-        local scale_x = target_w / self.video_width
-        local scale_y = target_h / self.video_height
+        local scale_x = target_w / self.visual_width
+        local scale_y = target_h / self.visual_height
         local scale = fit == "cover" and math.max(scale_x, scale_y) or math.min(scale_x, scale_y)
-        self.width = self.video_width * scale
-        self.height = self.video_height * scale
+        self.width = self.visual_width * scale
+        self.height = self.visual_height * scale
         self.x = (target_w - self.width) / 2
         self.y = (target_h - self.height) / 2
     else
@@ -39,20 +73,46 @@ function WaveVideoDebugOverlay:update()
     self.fit = WaveVideoDebug:getConfig("fit") or "stretch"
     self:updateFit()
 
-    local timescale = Game.stage and Game.stage.timescale or 1
-    if timescale <= 0.01 then
-        self.queued_play = false
-        if self.video:isPlaying() then
-            self.paused_for_timescale = true
-            self.video:pause()
+    if self.source_type == "video" then
+        if self.queued_play then
+            self.queued_play = false
+            if not self.video:isPlaying() then
+                self.video:play()
+            end
         end
-    elseif self.paused_for_timescale and not self.video:isPlaying() then
-        self.paused_for_timescale = false
-        self.video:play()
-        self.was_playing = true
+
+        local timescale = Game.stage and Game.stage.timescale or 1
+        if timescale <= 0.01 then
+            self.queued_play = false
+            if self.video:isPlaying() then
+                self.paused_for_timescale = true
+                self.video:pause()
+            end
+        elseif self.paused_for_timescale and not self.video:isPlaying() then
+            self.paused_for_timescale = false
+            self.video:play()
+            self.was_playing = true
+        end
+
+        if self.looping and self.was_playing and not self.video:isPlaying() then
+            self.video:rewind()
+            self.video:play()
+        end
     end
 
     super.update(self)
+
+    if self.source_type == "video" then
+        self.was_playing = self.video:isPlaying()
+    end
+end
+
+function WaveVideoDebugOverlay:draw()
+    if self.source_type == "image" then
+        Draw.draw(self.texture, 0, 0, 0, self.width / self.visual_width, self.height / self.visual_height)
+    else
+        Draw.draw(self.video, 0, 0, 0, self.width / self.visual_width, self.height / self.visual_height)
+    end
 end
 
 function WaveVideoDebugOverlay:fullDraw()
