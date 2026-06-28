@@ -43,5 +43,6 @@ assets/sprites/waves/kris_phase1_1.png
 - `audio`: whether to load video audio; defaults to `false`.
 - `fit`: `stretch`, `contain`, or `cover`; defaults to `stretch`.
 - `loop`: whether the reference video loops; defaults to `false`.
+- `sync_timescale`: whether videos seek by Kristal stage timescale; defaults to `true`, matching Ctrl+O selection slowdown.
 
 If several waves run at once, the first wave with a matching visual is used. Missing visuals are ignored.

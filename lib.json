@@ -14,6 +14,7 @@
         "layer": "top",
         "audio": false,
         "fit": "stretch",
-        "loop": false
+        "loop": false,
+        "sync_timescale": true
     }
 }

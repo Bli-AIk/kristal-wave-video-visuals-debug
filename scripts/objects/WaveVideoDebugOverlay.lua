@@ -7,6 +7,7 @@ function WaveVideoDebugOverlay:init(source_type, asset_id, source_wave)
         self.video = Assets.newVideo(asset_id, WaveVideoDebug:getConfig("audio") == true)
         self.visual_width = self.video:getWidth()
         self.visual_height = self.video:getHeight()
+        self.video_duration = self:getVideoDuration()
     else
         self.texture = Assets.getTexture(asset_id)
         self.visual_width = self.texture:getWidth()
@@ -21,13 +22,38 @@ function WaveVideoDebugOverlay:init(source_type, asset_id, source_wave)
     self.alpha = WaveVideoDebug:getAlpha()
     self.fit = WaveVideoDebug:getConfig("fit") or "stretch"
     self.looping = WaveVideoDebug:getConfig("loop") == true
+    self.sync_timescale = WaveVideoDebug:getConfig("sync_timescale") ~= false
     self.queued_play = false
     self.was_playing = false
+    self.video_time = 0
     self:updateFit()
+end
+
+function WaveVideoDebugOverlay:getVideoDuration()
+    local ok, duration = pcall(function()
+        return self.video:getStream():getDuration()
+    end)
+    if ok and type(duration) == "number" and duration > 0 then
+        return duration
+    end
+end
+
+function WaveVideoDebugOverlay:seekVideo(time)
+    self.video_time = time
+    pcall(function()
+        self.video:seek(self.video_time)
+    end)
 end
 
 function WaveVideoDebugOverlay:play()
     if self.source_type ~= "video" then
+        return
+    end
+
+    if self.sync_timescale then
+        self.queued_play = false
+        self.video:pause()
+        self:seekVideo(self.video_time)
         return
     end
 
@@ -71,9 +97,31 @@ function WaveVideoDebugOverlay:update()
     self.layer = WaveVideoDebug:getLayer()
     self.alpha = WaveVideoDebug:getAlpha()
     self.fit = WaveVideoDebug:getConfig("fit") or "stretch"
+    self.sync_timescale = WaveVideoDebug:getConfig("sync_timescale") ~= false
     self:updateFit()
 
     if self.source_type == "video" then
+        if self.sync_timescale then
+            if self.video:isPlaying() then
+                self.video:pause()
+            end
+
+            if DT > 0 then
+                local next_time = self.video_time + DT
+                if self.video_duration and next_time >= self.video_duration then
+                    if self.looping then
+                        next_time = next_time % self.video_duration
+                    else
+                        next_time = self.video_duration
+                    end
+                end
+                self:seekVideo(next_time)
+                self.was_playing = true
+            end
+            super.update(self)
+            return
+        end
+
         if self.queued_play then
             self.queued_play = false
             if not self.video:isPlaying() then
