@@ -27,6 +27,7 @@ function WaveVideoDebugOverlay:init(source_type, asset_id, source_wave)
     self.was_playing = false
     self.sync_started = false
     self.paused_for_timescale = false
+    self.pause_after_draw = false
     self.video_time = 0
     self:updateFit()
 end
@@ -47,6 +48,18 @@ function WaveVideoDebugOverlay:seekVideo(time)
     end)
 end
 
+function WaveVideoDebugOverlay:advanceVideoTime(dt)
+    local next_time = self.video_time + math.max(dt, 0)
+    if self.video_duration and next_time >= self.video_duration then
+        if self.looping then
+            next_time = next_time % self.video_duration
+        else
+            next_time = self.video_duration
+        end
+    end
+    self:seekVideo(next_time)
+end
+
 function WaveVideoDebugOverlay:tellVideo()
     local ok, time = pcall(function()
         return self.video:tell()
@@ -59,6 +72,28 @@ end
 
 function WaveVideoDebugOverlay:getStageTimescale()
     return Game.stage and Game.stage.timescale or 1
+end
+
+function WaveVideoDebugOverlay:isObjectSelectionSlowdownActive()
+    return Kristal.DebugSystem
+        and Kristal.DebugSystem.selectionOpen
+        and Kristal.DebugSystem:selectionOpen()
+        and Kristal.Config["objectSelectionSlowdown"]
+end
+
+function WaveVideoDebugOverlay:willStagePauseAfterThisFrame(timescale)
+    if not self:isObjectSelectionSlowdownActive() or timescale <= 0 then
+        return false
+    end
+
+    local unscaled_dt = DT / timescale
+    return timescale - (unscaled_dt / 0.6) <= 0
+end
+
+function WaveVideoDebugOverlay:pauseAfterDraw()
+    self.pause_after_draw = true
+    self.paused_for_timescale = true
+    self.was_playing = false
 end
 
 function WaveVideoDebugOverlay:startVideo()
@@ -76,6 +111,7 @@ function WaveVideoDebugOverlay:startVideo()
     end
     self.sync_started = true
     self.paused_for_timescale = false
+    self.pause_after_draw = false
     self.was_playing = true
 end
 
@@ -136,37 +172,35 @@ function WaveVideoDebugOverlay:update()
 
             local timescale = self:getStageTimescale()
             if timescale <= 0.01 then
-                if self.video:isPlaying() then
-                    self.video:pause()
+                if not self.video:isPlaying() then
+                    self.video:play()
                 end
-                self.paused_for_timescale = true
-                self.was_playing = false
+                self:advanceVideoTime(DT)
+                self:pauseAfterDraw()
                 super.update(self)
                 return
             end
 
             if timescale < 0.99 then
-                if self.video:isPlaying() then
-                    self.video:pause()
+                if not self.video:isPlaying() then
+                    self.video:play()
                 end
 
-                local next_time = self.video_time + math.max(DT, 0)
-                if self.video_duration and next_time >= self.video_duration then
-                    if self.looping then
-                        next_time = next_time % self.video_duration
-                    else
-                        next_time = self.video_duration
-                    end
-                end
-                self:seekVideo(next_time)
+                self:advanceVideoTime(DT)
                 self.paused_for_timescale = true
-                self.was_playing = false
+                if self:willStagePauseAfterThisFrame(timescale) then
+                    self:pauseAfterDraw()
+                    super.update(self)
+                    return
+                end
+                self.was_playing = true
             else
                 if self.paused_for_timescale or not self.video:isPlaying() then
                     self:seekVideo(self.video_time)
                     self.video:play()
                 end
                 self.paused_for_timescale = false
+                self.pause_after_draw = false
                 self.was_playing = true
                 self.video_time = self:tellVideo()
             end
@@ -219,6 +253,10 @@ function WaveVideoDebugOverlay:draw()
         Draw.draw(self.texture, 0, 0, 0, self.width / self.visual_width, self.height / self.visual_height)
     else
         Draw.draw(self.video, 0, 0, 0, self.width / self.visual_width, self.height / self.visual_height)
+        if self.pause_after_draw then
+            self.video:pause()
+            self.pause_after_draw = false
+        end
     end
 end
 
