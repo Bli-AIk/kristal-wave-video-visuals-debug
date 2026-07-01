@@ -7,8 +7,7 @@
     ],
     "config": {
         "enabled": false,
-        "video_dir": "waves",
-        "image_dir": "waves",
+        "debug_dir": "debug",
         "priority": "video",
         "alpha": 0.3,
         "layer": "top",

@@ -2,6 +2,9 @@ local lib = {}
 
 local LIB_ID = "wave-video-debug"
 
+local VIDEO_EXTS = { ".ogv", ".ogg" }
+local IMAGE_EXTS = { ".png", ".jpg", ".jpeg" }
+
 Registry.registerGlobal("WaveVideoDebug", lib)
 
 local function trimSlashes(value)
@@ -42,30 +45,45 @@ function lib:getLayer()
     return BATTLE_LAYERS["top"]
 end
 
-function lib:getVideoId(wave)
-    local wave_id = wave and wave.id
-    if not wave_id then
-        return nil
+function lib:getDebugBasePath()
+    local dir = trimSlashes(config("debug_dir") or "debug")
+    local mod_path = Mod and Mod.info and Mod.info.path
+    if mod_path then
+        return mod_path .. "/" .. dir
     end
-
-    local dir = trimSlashes(config("video_dir") or "waves")
-    if dir == "" then
-        return wave_id
-    end
-    return dir .. "/" .. wave_id
+    return dir
 end
 
-function lib:getImageId(wave)
+function lib:getVideoPath(wave)
     local wave_id = wave and wave.id
     if not wave_id then
         return nil
     end
 
-    local dir = trimSlashes(config("image_dir") or "waves")
-    if dir == "" then
-        return wave_id
+    local base = self:getDebugBasePath()
+    for _, ext in ipairs(VIDEO_EXTS) do
+        local path = base .. "/" .. wave_id .. ext
+        if love.filesystem.getInfo(path) then
+            return path
+        end
     end
-    return dir .. "/" .. wave_id
+    return nil
+end
+
+function lib:getImagePath(wave)
+    local wave_id = wave and wave.id
+    if not wave_id then
+        return nil
+    end
+
+    local base = self:getDebugBasePath()
+    for _, ext in ipairs(IMAGE_EXTS) do
+        local path = base .. "/" .. wave_id .. ext
+        if love.filesystem.getInfo(path) then
+            return path
+        end
+    end
+    return nil
 end
 
 function lib:getPriority()
@@ -77,33 +95,31 @@ function lib:getPriority()
 end
 
 function lib:getWaveVisual(wave)
-    local video_id = self:getVideoId(wave)
-    local image_id = self:getImageId(wave)
-    local has_video = video_id and Assets.getVideoPath(video_id)
-    local has_image = image_id and Assets.getTexture(image_id)
+    local video_path = self:getVideoPath(wave)
+    local image_path = self:getImagePath(wave)
 
     if self:getPriority() == "image" then
-        if has_image then
-            return "image", image_id, wave
+        if image_path then
+            return "image", image_path, wave
         end
-        if has_video then
-            return "video", video_id, wave
+        if video_path then
+            return "video", video_path, wave
         end
     else
-        if has_video then
-            return "video", video_id, wave
+        if video_path then
+            return "video", video_path, wave
         end
-        if has_image then
-            return "image", image_id, wave
+        if image_path then
+            return "image", image_path, wave
         end
     end
 end
 
 function lib:getFirstWaveVisual(waves)
     for _, wave in ipairs(waves or {}) do
-        local source_type, asset_id = self:getWaveVisual(wave)
+        local source_type, asset_path = self:getWaveVisual(wave)
         if source_type then
-            return source_type, asset_id, wave
+            return source_type, asset_path, wave
         end
     end
 end
@@ -122,12 +138,12 @@ function lib:attachToBattle(battle)
         return
     end
 
-    local source_type, asset_id, wave = self:getFirstWaveVisual(battle and battle.waves)
+    local source_type, asset_path, wave = self:getFirstWaveVisual(battle and battle.waves)
     if not source_type then
         return
     end
 
-    local overlay = WaveVideoDebugOverlay(source_type, asset_id, wave)
+    local overlay = WaveVideoDebugOverlay(source_type, asset_path, wave)
     battle.wave_video_debug_overlay = overlay
     battle:addChild(overlay)
     if overlay.play then

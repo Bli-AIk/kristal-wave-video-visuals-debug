@@ -1,21 +1,21 @@
 local WaveVideoDebugOverlay, super = Class(Object)
 
-function WaveVideoDebugOverlay:init(source_type, asset_id, source_wave)
+function WaveVideoDebugOverlay:init(source_type, filepath, source_wave)
     super.init(self, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
 
     if source_type == "video" then
-        self.video = Assets.newVideo(asset_id, WaveVideoDebug:getConfig("audio") == true)
+        self.video = love.graphics.newVideo(filepath, { audio = WaveVideoDebug:getConfig("audio") == true })
         self.visual_width = self.video:getWidth()
         self.visual_height = self.video:getHeight()
         self.video_duration = self:getVideoDuration()
     else
-        self.texture = Assets.getTexture(asset_id)
+        self.texture = love.graphics.newImage(filepath)
         self.visual_width = self.texture:getWidth()
         self.visual_height = self.texture:getHeight()
     end
 
     self.source_type = source_type
-    self.asset_id = asset_id
+    self.filepath = filepath
     self.source_wave = source_wave
     self.debug_select = false
     self.layer = WaveVideoDebug:getLayer()

@@ -1,6 +1,6 @@
 # Kristal Wave Video Debug
 
-A small Kristal library for overlaying per-wave Ogg Theora videos or PNG reference images during battle waves.
+A small Kristal library for overlaying per-wave Ogg Theora videos or reference images during battle waves.
 
 ## Usage
 
@@ -18,30 +18,26 @@ Enable it in your project's `mod.json`:
 }
 ```
 
-Place videos under `assets/videos/waves/`, using the wave id as the filename:
+Place debug files under a `debug/` directory in your mod root (NOT under `assets/`, so they won't be packaged into the game build):
 
 ```text
-assets/videos/waves/kris_phase1_1.ogv
+debug/kris_phase1_1.ogv
+debug/kris_phase1_1.jpg
 ```
 
-Kristal only supports Ogg Theora videos for `assets/videos`.
-
-If a video is missing, the library can show a PNG with the same wave id:
-
-```text
-assets/sprites/waves/kris_phase1_1.png
-```
+The filename must match the wave id. Supported formats:
+- Video: `.ogv`, `.ogg` (Ogg Theora)
+- Image: `.png`, `.jpg`, `.jpeg`
 
 ## Config
 
 - `enabled`: `true` to show debug visuals.
-- `video_dir`: folder under `assets/videos`; defaults to `waves`.
-- `image_dir`: folder under `assets/sprites`; defaults to `waves`.
-- `priority`: `video` or `image`; defaults to `video`.
+- `debug_dir`: directory under the mod root containing debug videos and images; defaults to `"debug"`.
+- `priority`: `"video"` or `"image"`; defaults to `"video"`.
 - `alpha`: overlay opacity from `0` to `1`; defaults to `0.3`.
-- `layer`: battle layer name or number; defaults to `top`.
+- `layer`: battle layer name or number; defaults to `"top"`.
 - `audio`: whether to load video audio; defaults to `false`.
-- `fit`: `stretch`, `contain`, or `cover`; defaults to `stretch`.
+- `fit`: `"stretch"`, `"contain"`, or `"cover"`; defaults to `"stretch"`.
 - `loop`: whether the reference video loops; defaults to `false`.
 - `sync_timescale`: whether videos seek by Kristal stage timescale; defaults to `true`, matching Ctrl+O selection slowdown.
 
