@@ -42,3 +42,5 @@ The filename must match the wave id. Supported formats:
 - `sync_timescale`: whether videos seek by Kristal stage timescale; defaults to `true`, matching Ctrl+O selection slowdown.
 
 If several waves run at once, the first wave with a matching visual is used. Missing visuals are ignored.
+
+When Ctrl+O object selection is open and Kristal's Selection Timestop setting is enabled, arrow keys nudge the overlay by 1px for alignment.
