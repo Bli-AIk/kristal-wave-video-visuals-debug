@@ -14,6 +14,9 @@
         "audio": false,
         "fit": "stretch",
         "loop": false,
-        "sync_timescale": true
+        "sync_timescale": true,
+        "toggle_key": "h",
+        "cycle_image_key": "j",
+        "switch_media_key": "k"
     }
 }

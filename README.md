@@ -40,5 +40,8 @@ The filename must match the wave id. Supported formats:
 - `fit`: `"stretch"`, `"contain"`, or `"cover"`; defaults to `"stretch"`.
 - `loop`: whether the reference video loops; defaults to `false`.
 - `sync_timescale`: whether videos seek by Kristal stage timescale; defaults to `true`, matching Ctrl+O selection slowdown.
+- `toggle_key`: key to show/hide the overlay at runtime; defaults to `"h"`.
+- `cycle_image_key`: key to cycle fallback images; defaults to `"j"`.
+- `switch_media_key`: key to switch the current wave between its video and image when both exist; defaults to `"k"`.
 
-If several waves run at once, the first wave with a matching visual is used. Missing visuals are ignored.
+If several waves run at once, the first wave with a matching visual is used. When no active wave has a matching visual, the overlay falls back to images in the debug directory, sorted newest to oldest. The newest image is shown by default, and `cycle_image_key` switches through those fallback images.

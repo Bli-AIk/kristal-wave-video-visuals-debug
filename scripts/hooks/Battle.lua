@@ -11,6 +11,13 @@ function Battle:endWaves(...)
     return super.endWaves(self, ...)
 end
 
+function Battle:onKeyPressed(key)
+    if WaveVideoDebug:handleKeyPressed(key, false, self) then
+        return
+    end
+    return super.onKeyPressed(self, key)
+end
+
 function Battle:onRemove(...)
     WaveVideoDebug:clear(self)
     return super.onRemove(self, ...)
