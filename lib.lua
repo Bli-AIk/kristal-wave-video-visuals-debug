@@ -45,13 +45,6 @@ function lib:getLayer()
     return BATTLE_LAYERS["top"]
 end
 
-function lib:isSelectionTimestopActive()
-    return Kristal.DebugSystem
-        and Kristal.DebugSystem.selectionOpen
-        and Kristal.DebugSystem:selectionOpen()
-        and Kristal.Config["objectSelectionSlowdown"]
-end
-
 function lib:getDebugBasePath()
     local dir = trimSlashes(config("debug_dir") or "debug")
     local mod_path = Mod and Mod.info and Mod.info.path
@@ -156,55 +149,6 @@ function lib:attachToBattle(battle)
     if overlay.play then
         overlay:play()
     end
-end
-
-function lib:getNudgeDelta(key)
-    if Input.is("left", key) then
-        return -1, 0
-    elseif Input.is("right", key) then
-        return 1, 0
-    elseif Input.is("up", key) then
-        return 0, -1
-    elseif Input.is("down", key) then
-        return 0, 1
-    end
-end
-
-function lib:nudgeOverlayForKey(key)
-    if not self:isEnabled() or not self:isSelectionTimestopActive() then
-        return false
-    end
-
-    local overlay = Game.battle and Game.battle.wave_video_debug_overlay
-    if not overlay or not overlay.nudge then
-        return false
-    end
-
-    local dx, dy = self:getNudgeDelta(key)
-    if dx and dy then
-        overlay:nudge(dx, dy)
-        return true
-    end
-
-    return false
-end
-
-function lib:markNudgeKeyEvent(key, is_repeat)
-    self._nudge_key_event = { key = key, is_repeat = is_repeat == true }
-end
-
-function lib:consumeNudgeKeyEvent(key, is_repeat)
-    local event = self._nudge_key_event
-    self._nudge_key_event = nil
-    return event and event.key == key and event.is_repeat == (is_repeat == true)
-end
-
-function lib:onKeyPressed(key, is_repeat)
-    if self:nudgeOverlayForKey(key) then
-        self:markNudgeKeyEvent(key, is_repeat)
-        return true
-    end
-    return false
 end
 
 return lib

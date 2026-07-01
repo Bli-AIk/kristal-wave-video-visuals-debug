@@ -28,8 +28,6 @@ function WaveVideoDebugOverlay:init(source_type, filepath, source_wave)
     self.sync_started = false
     self.paused_for_timescale = false
     self.pause_after_draw = false
-    self.offset_x = 0
-    self.offset_y = 0
     self.video_time = 0
     self:updateFit()
 end
@@ -138,16 +136,9 @@ function WaveVideoDebugOverlay:onRemoveFromStage(stage)
     end
 end
 
-function WaveVideoDebugOverlay:nudge(dx, dy)
-    self.offset_x = self.offset_x + dx
-    self.offset_y = self.offset_y + dy
-    self:updateFit()
-end
-
 function WaveVideoDebugOverlay:updateFit()
     local fit = self.fit
     local target_w, target_h = SCREEN_WIDTH, SCREEN_HEIGHT
-    local x, y = 0, 0
 
     if fit == "contain" or fit == "cover" then
         local scale_x = target_w / self.visual_width
@@ -155,15 +146,14 @@ function WaveVideoDebugOverlay:updateFit()
         local scale = fit == "cover" and math.max(scale_x, scale_y) or math.min(scale_x, scale_y)
         self.width = self.visual_width * scale
         self.height = self.visual_height * scale
-        x = (target_w - self.width) / 2
-        y = (target_h - self.height) / 2
+        self.x = (target_w - self.width) / 2
+        self.y = (target_h - self.height) / 2
     else
+        self.x = 0
+        self.y = 0
         self.width = target_w
         self.height = target_h
     end
-
-    self.x = x + self.offset_x
-    self.y = y + self.offset_y
 end
 
 function WaveVideoDebugOverlay:update()
@@ -278,7 +268,6 @@ function WaveVideoDebugOverlay:fullDraw()
     local old_r, old_g, old_b, old_a = love.graphics.getColor()
     love.graphics.push()
     love.graphics.origin()
-    love.graphics.translate(self.x, self.y)
     Draw.setColor(self:getDrawColor())
     self:draw()
     love.graphics.pop()
